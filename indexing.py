@@ -8,10 +8,12 @@ def metadata_extractor(file_path):
         "name" : file.name,
         "extension" : file.suffix,
         "path" : str(file.resolve()),
+        "parent" : str(file.parent),
         "size" : info.st_size,
         "created" : str(datetime.fromtimestamp(info.st_ctime)),
-        "last modified" : str(datetime.fromtimestamp(info.st_mtime)),
-        "last accessed" : str(datetime.fromtimestamp(info.st_atime))
+        "last_modified" : str(datetime.fromtimestamp(info.st_mtime)),
+        "last_accessed" : str(datetime.fromtimestamp(info.st_atime)),
+        "is_file" : file.is_file(),
     }
     return metadata
 
