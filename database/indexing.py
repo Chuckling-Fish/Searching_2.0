@@ -17,4 +17,6 @@ def metadata_extractor(file_path):
     }
     return metadata
 
-print(metadata_extractor("D:/Downloads/Project_Outline_Detailed.pdf"))
+
+if __name__ == "__main__":
+    print(metadata_extractor("C:/Users/Anjum/Downloads/Telegram Desktop/Social_Stratification.pdf"))
