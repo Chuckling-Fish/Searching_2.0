@@ -6,22 +6,6 @@ Index your PDFs and search them by keyword, for now.
 pip install -r libraries.txt
 ```
 
-## Folder structure
-```
-Searching_2.0/
-├── database/
-│   ├── database.py
-│   ├── data_insertion.py
-│   ├── indexing.py
-│   ├── search.py              
-│   └── index.db            (created automatically)
-├── pdf/
-│   ├── pdf_chunker.py
-│   ├── pdf_extractor.py
-│   └── scoring.py
-└── index_pdf.py
-```
-
 ## 1. Index a file
 Open `index_pdf.py` and set the path to the PDF you want to search, at the bottom:
 ```python
