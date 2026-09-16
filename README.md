@@ -21,7 +21,7 @@ python index_pdf.py
 
 This extracts the text, splits it into chunks and stores everything in `database/index.db`. Re-running it on the same file updates it instead of duplicating it.
 
-## 3. Search
+## 2. Search
 **Keyword search** (exact words/phrases):
 ```
 cd database
