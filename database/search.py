@@ -11,7 +11,7 @@ def sanitize_fts_query(query):
     return " ".join(f'"{token}"' for token in tokens)
 
 
-def keyword_search(query, limit=10):
+def keyword_search(query, extension=None, limit=10):
     safe_query = sanitize_fts_query(query)
     if safe_query is None:
         return []
@@ -19,9 +19,10 @@ def keyword_search(query, limit=10):
     connection.row_factory = sqlite3.Row
     cursor = connection.cursor()
 
-    cursor.execute("""
+    sql = """
         SELECT
             chunks.id AS chunk_id,
+            files.id AS file_id,
             files.path AS file_path,
             files.name AS file_name,
             chunks.page_start,
@@ -29,15 +30,23 @@ def keyword_search(query, limit=10):
             chunks.heading,
             chunks.section_path,
             chunks.chunk_type,
-            snippet(chunks_fts, 2, '[', ']', ' ... ', 12) AS snippet,
+            snippet(chunks_fts, 2, '[', ']', ' ... ', 64) AS snippet,
             bm25(chunks_fts) AS score
         FROM chunks_fts
         JOIN chunks ON chunks.id = chunks_fts.rowid
         JOIN files ON files.id = chunks.file_id
         WHERE chunks_fts MATCH ?
-        ORDER BY score
-        LIMIT ?
-    """, (safe_query, limit))
+    """
+    params = [safe_query]
+
+    if extension:
+        sql += " AND files.extension = ?"
+        params.append(extension)
+
+    sql += " ORDER BY score LIMIT ?"
+    params.append(limit)
+
+    cursor.execute(sql, params)
     results = [dict(row) for row in cursor.fetchall()]
     connection.close()
 

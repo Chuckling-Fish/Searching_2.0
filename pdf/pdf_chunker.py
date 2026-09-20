@@ -98,21 +98,6 @@ def update_section_path(
     section_path.append(heading)
     return section_path
 
-# CREATE SEARCH TEXT
-def create_search_text(
-    text,
-    section_path
-):
-    parts = []
-    # Add complete document hierarchy
-    if section_path:
-        parts.append(
-            " > ".join(section_path)
-        )
-    # Add chunk content
-    parts.append(text)
-    return " ".join(parts)
-
 # CREATE ONE CHUNK
 def make_chunk(
     blocks,
@@ -139,12 +124,7 @@ def make_chunk(
         parent_heading = section_path[-2]
     else:
         parent_heading = None
-     
-    # Search text
-    search_text = create_search_text(
-        text,
-        section_path
-    )
+
     return {
         "page_start": blocks[0]["page"],
         "page_end": blocks[-1]["page"],
@@ -152,7 +132,6 @@ def make_chunk(
         "parent_heading": parent_heading,
         "section_path": section_path.copy(),
         "text": text,
-        "search_text": search_text,
         "chunk_type": "text"
     }
 
