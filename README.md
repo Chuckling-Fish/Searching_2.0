@@ -32,7 +32,7 @@ This step takes the most amount of time.
 
 
 ## 3. Search
-To start the search, assuming you are in the root directory, your prompt wll look like this:
+To start the search, assuming you are in the root directory, your prompt will look like this:
 ```
 python database/hybrid_search.py
 ```
