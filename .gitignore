@@ -9,3 +9,11 @@ __pycache__/
 
 # macOS
 .DS_Store
+# Generated semantic index
+*.bin
+
+# Virtual environment
+.venv/
+
+# Local editor cache
+.cph/
