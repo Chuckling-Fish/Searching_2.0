@@ -3,29 +3,15 @@ import sqlite3
 
 from database import DATABASE_PATH
 
-
 def sanitize_query_tokens(query):
-    """
-    Same approach as search.py's sanitize_fts_query: pull out word
-    tokens and quote each one, so punctuation in the typed query can't
-    be misread as FTS5 syntax.
-    """
 
+    # Convert query into safe FTS tokens
     tokens = re.findall(r"\w+", query.lower())
-
     if not tokens:
         return None
-
     return " ".join(f'"{token}"' for token in tokens)
 
-
 def filename_search(query, extension=None, limit=20):
-    """
-    Searches ALL indexed files by name - including types with no
-    content extractor (images, videos, archives, etc), since every
-    file gets a name_tokens entry regardless of content_indexed.
-    """
-
     safe_query = sanitize_query_tokens(query)
     if safe_query is None:
         return []
@@ -34,6 +20,7 @@ def filename_search(query, extension=None, limit=20):
     connection.row_factory = sqlite3.Row
     cursor = connection.cursor()
 
+    # Search file names using FTS5
     sql = """
         SELECT
             files.id AS file_id,
@@ -50,23 +37,23 @@ def filename_search(query, extension=None, limit=20):
     """
     params = [safe_query]
 
+    # Filter by extension when provided
     if extension:
         sql += " AND files.extension = ?"
         params.append(extension)
-
     sql += " ORDER BY score LIMIT ?"
     params.append(limit)
 
     cursor.execute(sql, params)
     results = [dict(row) for row in cursor.fetchall()]
     connection.close()
-
     return results
 
 
 if __name__ == "__main__":
     import sys
 
+    # Get the search query from arguments or input
     query = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else input("Search: ")
 
     for i, result in enumerate(filename_search(query), start=1):

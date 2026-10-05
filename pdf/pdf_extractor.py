@@ -221,7 +221,7 @@ def classify_block(block, normal_gap):
 
 # PROCESS ONE PAGE
 def process_page(page, page_number):
-    # Step 1: Extract blocks
+    # Extract blocks
     blocks = extract_blocks(
         page,
         page_number
@@ -229,28 +229,28 @@ def process_page(page, page_number):
     if not blocks:
         return []
 
-    # Step 2: Calculate vertical spacing
+    # Calculate vertical spacing
     blocks = calculate_gaps(
         blocks
     )
 
-    # Step 3: Determine normal body font size
+    # Determine normal body font size
     body_font_size = get_body_font_size(
         blocks
     )
 
-    # Step 4: Add body font size to blocks
+    # Add body font size to blocks
     blocks = add_body_font_size(
         blocks,
         body_font_size
     )
 
-    # Step 5: Determine normal spacing
+    # Determine normal spacing
     normal_gap = get_normal_gap(
         blocks
     )
 
-    # Step 6: Classify blocks
+    # Classify blocks
     for block in blocks:
         block_type, heading_score, noise_score = classify_block(
             block,

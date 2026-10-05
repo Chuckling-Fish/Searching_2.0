@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS chunks (
     FOREIGN KEY (file_id) REFERENCES files(id)
 );
 
+# Full-text index for chunk content
 CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
     heading,
     section_path,
@@ -42,6 +43,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
     content_rowid='id'
 );
 
+# Keep chunk search index synchronized
 CREATE TRIGGER IF NOT EXISTS chunks_after_insert AFTER INSERT ON chunks BEGIN
     INSERT INTO chunks_fts(rowid, heading, section_path, text)
     VALUES (new.id, new.heading, new.section_path, new.text);
@@ -59,21 +61,14 @@ CREATE TRIGGER IF NOT EXISTS chunks_after_update AFTER UPDATE ON chunks BEGIN
     VALUES (new.id, new.heading, new.section_path, new.text);
 END;
 
--- -----------------------------------------------------------
--- Filename search, over ALL files (including types with no
--- content extractor - images, videos, archives, etc). name_tokens
--- is precomputed in Python (indexing.tokenize_filename: split on
--- _/-/./camelCase) and stored as a real column, because FTS5's
--- own tokenizer can't do camelCase splitting - by the time it sees
--- the text, the splitting has already happened.
--- -----------------------------------------------------------
-
+# Full-text index for file names
 CREATE VIRTUAL TABLE IF NOT EXISTS files_fts USING fts5(
     name_tokens,
     content='files',
     content_rowid='id'
 );
 
+# Keep file search index synchronized
 CREATE TRIGGER IF NOT EXISTS files_after_insert AFTER INSERT ON files BEGIN
     INSERT INTO files_fts(rowid, name_tokens)
     VALUES (new.id, new.name_tokens);
@@ -96,6 +91,7 @@ END;
 def _sync_fts_if_needed(connection):
     cursor = connection.cursor()
 
+    # Rebuild chunk index if it is empty
     cursor.execute("SELECT COUNT(*) FROM chunks")
     chunks_count = cursor.fetchone()[0]
     cursor.execute("SELECT COUNT(*) FROM chunks_fts")
@@ -104,6 +100,7 @@ def _sync_fts_if_needed(connection):
         cursor.execute("INSERT INTO chunks_fts(chunks_fts) VALUES ('rebuild')")
         connection.commit()
 
+    # Rebuild file index if it is empty
     cursor.execute("SELECT COUNT(*) FROM files")
     files_count = cursor.fetchone()[0]
     cursor.execute("SELECT COUNT(*) FROM files_fts")
@@ -115,11 +112,12 @@ def _sync_fts_if_needed(connection):
 def init_db():
     connection = sqlite3.connect(DATABASE_PATH)
     cursor = connection.cursor()
+
+    # Create tables, indexes and triggers
     cursor.executescript(SCHEMA)
     connection.commit()
     _sync_fts_if_needed(connection)
     connection.close()
-
 
 if __name__ == "__main__":
     init_db()

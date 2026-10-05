@@ -1,6 +1,4 @@
-
 import sqlite3
-
 
 class CodeDatabase:
 
