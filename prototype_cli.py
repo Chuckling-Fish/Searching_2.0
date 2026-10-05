@@ -1,3 +1,4 @@
+from pathlib import Path
 
 from database.code_hybrid_search import hybrid_search
 from analysis.code_output_analyzer import analyze_cpp_file
@@ -9,11 +10,12 @@ def print_result(number, result):
     print(f"RESULT {number}")
     print("=" * 70)
 
-    print(f"File:     {result['file_name']}")
-    print(f"Language: {result['language']}")
-    print(f"Type:     {result['chunk_type']}")
-    print(f"Name:     {result['name']}")
-    print(f"Lines:    {result['start_line']}-{result['end_line']}")
+    print(f"File:      {result['file_name']}")
+    print(f"Directory: {Path(result['file_path']).parent}")
+    print(f"Language:  {result['language']}")
+    print(f"Type:      {result['chunk_type']}")
+    print(f"Name:      {result['name']}")
+    print(f"Lines:     {result['start_line']}-{result['end_line']}")
 
     if result.get("behavior"):
         print()
@@ -179,10 +181,10 @@ def main():
                 f"({result['language']})"
             )
 
-            if result.get("behavior"):
-                print(
-                    f"   Behavior: {result['behavior']}"
-                )
+            print(
+                f"   Directory: "
+                f"{Path(result['file_path']).parent}"
+            )
 
             print(
                 f"   Lines: "

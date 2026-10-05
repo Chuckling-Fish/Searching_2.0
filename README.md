@@ -100,13 +100,13 @@ Start the code-search prototype with:
 python prototype_cli.py
 ```
 
-The program provides three search modes:
+The prototype provides three search modes:
 
 1. **Hybrid** — combines keyword and semantic search.
 2. **Keyword** — searches matching terms in file paths, names, source code, and behavior descriptions.
 3. **Semantic** — searches for code with similar meaning using vector embeddings.
 
-You can also filter results by file extension, such as:
+Results can also be filtered by file extension:
 
 ```text
 .cpp
@@ -114,11 +114,19 @@ You can also filter results by file extension, such as:
 .java
 ```
 
-or leave the field empty to search all supported code files.
+Leave the extension field empty to search all supported code files.
+
+The search result list displays:
+
+* File name
+* Function/code name
+* Language
+* Directory
+* Line range
 
 ### 3.4 Inspect Search Results
 
-After selecting a result, the prototype provides:
+After selecting a search result, the prototype provides:
 
 ```text
 [1] Show code
@@ -127,11 +135,26 @@ After selecting a result, the prototype provides:
 [4] Back
 ```
 
-**Show code** displays the indexed code chunk and its file, language, type, name, and line range.
+**Show code** displays the selected code chunk.
 
-**Behavior** displays detected characteristics such as loops, conditional logic, comparisons, arithmetic operations, console output, return statements, and function parameters.
+**Behavior** displays detected characteristics such as:
 
-**Analyze output** can compile and run supported C++ source files with user-provided input and display the program output or errors.
+* Loops
+* Conditional logic
+* Comparisons
+* Arithmetic operations
+* Console output
+* Return statements
+* Function parameters
+
+**Analyze output** can compile and run the complete supported C++ source file using user-provided input. It displays:
+
+* Execution status
+* Program output
+* Compilation/runtime errors
+* Return code
+
+**Back** returns to the search result list.
 
 ### 3.5 Code Search Workflow
 
@@ -155,8 +178,13 @@ database/code_vector_index.bin
 prototype_cli.py
     ↓
 Keyword / Semantic / Hybrid Search
+    ↓
+Select Result
+    ↓
+Show Code / Behavior / Analyze Output
 ```
 
+<<<<<<< HEAD
 The PDF/document search and code-search components are separate parts of the overall project.
 The program will import a few libraries and setup the environment for searching. 
 
@@ -165,3 +193,6 @@ After a small delay, you will be prompted to search. Type your search term and p
 The program will keep running even after you enter your search term, prompting you again and again to search. You can quit by typing `quit` or `exit`, or by simply pressing `Enter`.
 
 Enjoy!
+=======
+The code-search component operates independently from the PDF/document search component.
+>>>>>>> 6638af6 (Update code search CLI and README)
