@@ -9,6 +9,8 @@ class CodeChunk:
     start_line: int
     end_line: int
     code: str
+    parent_name: str = ""
+    behavior: str = ""
 
 
 # Tree-sitter node type → our common chunk type
@@ -38,14 +40,55 @@ STRUCTURE_TYPES = {
 
 def get_node_name(node, source):
 
+    # Python, Java, and some C++ nodes
+    # have a direct "name" field.
     name_node = node.child_by_field_name("name")
 
-    if name_node is None:
-        return ""
+    if name_node is not None:
+        return source[
+            name_node.start_byte:name_node.end_byte
+        ].decode("utf-8")
 
-    return source[
-        name_node.start_byte:name_node.end_byte
-    ]
+    # C++ function_definition stores the
+    # function name inside the declarator.
+    declarator = node.child_by_field_name("declarator")
+
+    if declarator is not None:
+
+        current = declarator
+
+        # Walk through nested declarators.
+        while current is not None:
+
+            nested = current.child_by_field_name(
+                "declarator"
+            )
+
+            if nested is None:
+                break
+
+            current = nested
+
+        # At this point, C++ may give us:
+        # identifier / field_identifier
+        if current.type in {
+            "identifier",
+            "field_identifier"
+        }:
+            return source[
+                current.start_byte:current.end_byte
+            ].decode("utf-8")
+
+        # Some declarators may still contain
+        # the name as a field.
+        final_name = current.child_by_field_name("name")
+
+        if final_name is not None:
+            return source[
+                final_name.start_byte:final_name.end_byte
+            ].decode("utf-8")
+
+    return ""
 
 
 def extract_chunks(
@@ -62,7 +105,7 @@ def extract_chunks(
         {}
     )
 
-    def visit(node):
+    def visit(node, parent_name=""):
 
         # Is this node something we want
         # to turn into a chunk?
@@ -86,13 +129,23 @@ def extract_chunks(
                 start_line=node.start_point.row + 1,
                 end_line=node.end_point.row + 1,
                 code=code,
+                parent_name=parent_name,
             )
 
             chunks.append(chunk)
 
+                       # This structure becomes the parent
+            # of structures inside it.
+            # Build the full parent context
+            if name:
+                if parent_name:
+                    parent_name = f"{parent_name}.{name}"
+                else:
+                    parent_name = name
+
         # Continue through the AST
         for child in node.children:
-            visit(child)
+            visit(child, parent_name)
 
     visit(tree.root_node)
 

@@ -1,84 +1,145 @@
-import sqlite3
-from pathlib import Path
-
 import hnswlib
 from sentence_transformers import SentenceTransformer
+from pathlib import Path
 
-from database import DATABASE_PATH
+from database.code_database import CodeDatabase
+
 
 BASE_DIR = Path(__file__).resolve().parent
-INDEX_PATH = BASE_DIR / "vector_index.bin"
+INDEX_PATH = BASE_DIR / "code_vector_index.bin"
 
 MODEL_NAME = "all-MiniLM-L6-v2"
-EMBEDDING_DIM = 384  # output size of all-MiniLM-L6-v2
 
 
 def load_all_chunks():
-    connection = sqlite3.connect(DATABASE_PATH)
-    cursor = connection.cursor()
 
-    cursor.execute("SELECT id, section_path, text FROM chunks")
-    rows = cursor.fetchall()
+    database = CodeDatabase()
 
-    connection.close()
+    rows = database.get_all_chunks()
 
     return rows
 
 
-def build_search_text(section_path, text):
-    """
-    Rebuilds the "heading context + content" text used for embeddings,
-    on the fly, from columns that are already stored (section_path,
-    text). This used to be a separate search_text column, but that
-    was just this same combination persisted a second time - storing
-    it was pure duplication, so it's built here instead, only for as
-    long as it takes to hand it to the embedding model.
-    """
+def build_search_text(row):
 
-    if section_path:
-        return f"{section_path} {text}"
+    (
+        chunk_id,
+        file_path,
+        language,
+        chunk_type,
+        name,
+        start_line,
+        end_line,
+        code,
+        behavior
+    ) = row
 
-    return text
+    # Convert bytes to text if necessary
+    if isinstance(code, bytes):
+
+        code = code.decode(
+            "utf-8",
+            errors="replace"
+        )
+
+    behavior = behavior or ""
+
+    return f"""
+File: {file_path}
+Language: {language}
+Type: {chunk_type}
+Name: {name}
+Behavior: {behavior}
+Code:
+{code}
+"""
 
 
 def build_index():
+
     rows = load_all_chunks()
 
     if not rows:
-        print("No chunks found in the database - run index_pdf.py first.")
+
+        print(
+            "No code chunks found in database."
+        )
+
         return
 
-    chunk_ids = [row[0] for row in rows]
-    texts = [build_search_text(row[1], row[2]) for row in rows]
+    chunk_ids = [
+        row[0]
+        for row in rows
+    ]
 
-    print(f"Embedding {len(texts)} chunks with {MODEL_NAME}...")
+    texts = [
+        build_search_text(row)
+        for row in rows
+    ]
+
+    print(
+        f"Embedding {len(texts)} chunks "
+        f"with {MODEL_NAME}..."
+    )
 
     try:
-        # Fast path: model already downloaded, skip the network
-        # cache-check entirely.
-        model = SentenceTransformer(MODEL_NAME, local_files_only=True)
-    except OSError:
-        # First-ever run: nothing cached yet, so this one time has to
-        # actually reach the network to download it.
-        model = SentenceTransformer(MODEL_NAME)
 
-    # normalize_embeddings=True makes cosine similarity == dot product,
-    # which is what HNSWlib's "cosine" space actually computes internally
+        model = SentenceTransformer(
+            MODEL_NAME,
+            local_files_only=True
+        )
+
+    except OSError:
+
+        model = SentenceTransformer(
+            MODEL_NAME
+        )
+
     embeddings = model.encode(
         texts,
         show_progress_bar=True,
         normalize_embeddings=True
     )
 
-    print("Building HNSWlib index...")
-    index = hnswlib.Index(space="cosine", dim=EMBEDDING_DIM)
-    index.init_index(max_elements=len(chunk_ids), ef_construction=200, M=16)
-    index.add_items(embeddings, chunk_ids)
+    dimension = model.get_embedding_dimension()
+
+    print(
+        f"Embedding dimension: {dimension}"
+    )
+
+    print(
+        "Building HNSWlib index..."
+    )
+
+    index = hnswlib.Index(
+        space="cosine",
+        dim=dimension
+    )
+
+    index.init_index(
+        max_elements=len(chunk_ids),
+        ef_construction=200,
+        M=16
+    )
+
+    index.add_items(
+        embeddings,
+        chunk_ids
+    )
+
     index.set_ef(50)
 
-    index.save_index(str(INDEX_PATH))
-    print(f"Saved vector index ({len(chunk_ids)} chunks) to {INDEX_PATH}")
+    index.save_index(
+        str(INDEX_PATH)
+    )
+
+    print(
+        f"Saved vector index "
+        f"({len(chunk_ids)} chunks) "
+        f"to {INDEX_PATH}"
+    )
 
 
 if __name__ == "__main__":
+
     build_index()
