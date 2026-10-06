@@ -9,6 +9,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
 # Django
 *.log
 db.sqlite3
@@ -44,6 +49,7 @@ build/
 
 # Local editor cache
 .cph/
+
 # Coverage
 .coverage
 htmlcov/
