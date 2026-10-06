@@ -9,6 +9,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# VS Code
+.vscode/
+
 # Database files
 *.db
 *.sqlite
