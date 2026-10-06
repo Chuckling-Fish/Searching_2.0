@@ -9,9 +9,7 @@ class LanguageConfig:
 
 
 class LanguageRegistry:
-
     def __init__(self):
-
         self.languages = {
             "python": LanguageConfig(
                 name="Python",
@@ -39,20 +37,15 @@ class LanguageRegistry:
                 self.extension_map[extension] = language_id
 
     def detect(self, file_path):
-
         extension = "." + file_path.rsplit(".", 1)[-1].lower()
-
         language_id = self.extension_map.get(extension)
 
         if language_id is None:
             return None
-
         return self.languages[language_id]
 
     def get(self, language_id):
-
         return self.languages.get(language_id)
-
 
 def create_default_registry():
     return LanguageRegistry()

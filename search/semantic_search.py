@@ -7,6 +7,7 @@ from database.code_database import CodeDatabase
 
 class SemanticSearch:
     def __init__(self):
+        # Load the embedding model used for code chunks
         print("Loading embedding model...")
         self.model = SentenceTransformer(
             "all-MiniLM-L6-v2"
@@ -22,6 +23,7 @@ class SemanticSearch:
         )
 
     def load_index(self):
+        # Make sure the vector index file exists
         if not self.index_path.exists():
             raise FileNotFoundError(
                 f"Semantic index not found: {self.index_path} - "
@@ -44,6 +46,7 @@ class SemanticSearch:
             dim=dimension
         )
 
+        # Load the saved vector index from disk
         self.index.load_index(
             str(self.index_path)
         )
@@ -57,11 +60,13 @@ class SemanticSearch:
                 "Semantic index has not been loaded. Call load_index() first."
             )
 
+        # Encode the query into a normalized vector
         query_embedding = self.model.encode(
             [query],
             normalize_embeddings=True
         )
 
+        # Find the nearest chunks in the vector index
         labels, distances = self.index.knn_query(
             query_embedding,
             k=k
@@ -74,6 +79,7 @@ class SemanticSearch:
 
         results = []
 
+        # Build a result entry for each matched chunk
         for label, distance in zip(
             labels[0],
             distances[0]
@@ -102,6 +108,7 @@ class SemanticSearch:
                 )
 
             behavior = behavior or ""
+            # Convert cosine distance into a similarity score
             similarity = 1 - float(distance)
             results.append({
                 "chunk_id": chunk_id,

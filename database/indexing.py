@@ -16,6 +16,7 @@ def tokenize_filename(name):
     text = re.sub(r"[_\-.]+", " ", text)
     tokens = text.split()
 
+    # Include the extension as a searchable token
     if suffix:
         tokens.append(suffix)
     return " ".join(tokens).lower()

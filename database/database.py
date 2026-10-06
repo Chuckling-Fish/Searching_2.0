@@ -110,12 +110,14 @@ def _sync_fts_if_needed(connection):
         connection.commit()
 
 def init_db():
+    # Create the database file and connect to it
     connection = sqlite3.connect(DATABASE_PATH)
     cursor = connection.cursor()
 
     # Create tables, indexes and triggers
     cursor.executescript(SCHEMA)
     connection.commit()
+    # Repair the FTS tables if they are out of sync
     _sync_fts_if_needed(connection)
     connection.close()
 

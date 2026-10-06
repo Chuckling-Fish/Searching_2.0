@@ -4,12 +4,14 @@ from pathlib import Path
 from database.code_database import CodeDatabase
 
 def sanitize_fts_query(query):
+    # Break the query into safe word tokens for FTS5
     tokens = re.findall(r"\w+", query.lower())
     if not tokens:
         return None
     return " ".join(f'"{token}"' for token in tokens)
 
 def keyword_search(query, extension=None, limit=10):
+    # Build a safe FTS5 query from the raw input
     safe_query = sanitize_fts_query(query)
     if safe_query is None:
         return []
@@ -33,6 +35,7 @@ def keyword_search(query, extension=None, limit=10):
         WHERE code_chunks_fts MATCH ?
     """
     parameters = [safe_query]
+    # Restrict results to a specific file extension if requested
     if extension:
         extension = extension.lower()
         if not extension.startswith("."):
@@ -50,6 +53,7 @@ def keyword_search(query, extension=None, limit=10):
     """
     parameters.append(limit)
 
+    # Run the search query
     cursor = database.connection.execute(
         sql,
         parameters
@@ -57,6 +61,7 @@ def keyword_search(query, extension=None, limit=10):
 
     rows = cursor.fetchall()
     results = []
+    # Convert each row into a result dictionary
     for row in rows:
         (
             chunk_id,

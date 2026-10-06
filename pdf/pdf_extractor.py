@@ -9,6 +9,7 @@ PDF_PATH = ".pdf"
 def extract_blocks(page, page_number):
     page_data = page.get_text("dict")
     blocks = []
+    # Walk through every raw block on the page
     for block_number, block in enumerate(page_data["blocks"]):
         # Ignore blocks that do not contain text lines
         if "lines" not in block:
@@ -36,6 +37,7 @@ def extract_blocks(page, page_number):
         # Font information
         font_sizes = []
         is_bold = False
+        # Collect font sizes and detect bold spans
         for line in block["lines"]:
             for span in line["spans"]:
                 font_sizes.append(
@@ -75,6 +77,7 @@ def extract_blocks(page, page_number):
             "line_count": line_count,
         }
         blocks.append(block_data)
+    # Order blocks top-to-bottom, left-to-right
     blocks.sort(
         key=lambda block: (
             block["y0"],
@@ -90,6 +93,7 @@ def extract_blocks(page, page_number):
 
 # CALCULATE SPACING BETWEEN BLOCKS
 def calculate_gaps(blocks):
+    # Calculate the gap before each block
     for i, block in enumerate(blocks):
         # First block
         if i == 0:
@@ -125,6 +129,7 @@ def get_body_font_size(blocks):
     if not blocks:
         return 0
     font_sizes = []
+    # Collect font sizes, ignoring unreasonably tiny text
     for block in blocks:
         if block["font_size"] >= 8:
             font_sizes.append(
@@ -133,12 +138,14 @@ def get_body_font_size(blocks):
     if not font_sizes:
         return 0
     font_sizes.sort()
+    # The median font size is treated as the body text size
     middle = len(font_sizes) // 2
     return font_sizes[middle]
 
 # FIND NORMAL GAP BETWEEN BLOCKS
 def get_normal_gap(blocks):
     gaps = []
+    # Collect all positive gaps between blocks
     for block in blocks:
         gap = block["gap_before"]
         if gap is not None and gap > 0:
@@ -146,6 +153,7 @@ def get_normal_gap(blocks):
     if not gaps:
         return 0
     gaps.sort()
+    # The median gap is treated as the normal spacing
     middle = len(gaps) // 2
     return gaps[middle]
 
@@ -184,6 +192,7 @@ def is_list_item(text):
 
 def is_numbered_heading(text):
     text = text.strip()
+    # Match numbering patterns from top level to four levels deep
     patterns = [
         r"^\d+\.\s+.+",                    
         r"^\d+\.\d+\s+.+",                 
@@ -200,8 +209,10 @@ def classify_block(block, normal_gap):
     heading_score = scoring.heading_score(block, normal_gap)
     noise_score = scoring.noise_score(block)
     text = block["text"]
+    # Treat clearly noisy blocks as noise regardless of other signals
     if noise_score >= 3:
         return ("NOISE", heading_score, noise_score)
+    # Numbered headings need either multi-level numbering or visual heading cues
     if is_numbered_heading(text):
         is_multi_level = bool(re.match(r"^\d+\.\d+", text))
         visual_heading_score = (
@@ -215,6 +226,7 @@ def classify_block(block, normal_gap):
         return ("LIST_ITEM", heading_score, noise_score)
     if is_numbered_heading(text):
         return ("HEADING", heading_score, noise_score)
+    # Fall back to the general heading score threshold
     if heading_score >= 4:
         return ("HEADING", heading_score, noise_score)
     return ("PARAGRAPH", heading_score, noise_score)
@@ -264,6 +276,7 @@ def process_page(page, page_number):
 # TEST
 if __name__ == "__main__":
     document = pymupdf.open(PDF_PATH)
+    # Process and print every page's classified blocks
     for page_number, page in enumerate(document, start=1):
         blocks = process_page(page, page_number)
         print("\n")

@@ -2,6 +2,7 @@ import re
 
 # Heading Detection
 def short_text_score(text):
+    # Short blocks are more likely to be headings
     word_count = len(text.split())
     if word_count <= 10:
         return 2
@@ -10,6 +11,7 @@ def short_text_score(text):
     return 0
 
 def bold_score(is_bold):
+    # Bold text is a heading signal
     if is_bold:
         return 2
     return 0
@@ -17,6 +19,7 @@ def bold_score(is_bold):
 def font_size_score(font_size, body_font_size):
     if body_font_size <= 0:
         return 0
+    # Larger text relative to body size is a heading signal
     ratio = font_size / body_font_size
     if ratio >= 1.5:
         return 2
@@ -28,6 +31,7 @@ def spacing_score(block, normal_gap):
     score = 0
     if normal_gap <= 0:
         return score
+    # Extra space before or after the block is a heading signal
     if block["gap_before"] is not None:
         if block["gap_before"] > normal_gap * 1.8:
             score += 1
@@ -37,23 +41,27 @@ def spacing_score(block, normal_gap):
     return score
 
 def line_count_score(block):
+    # Short blocks of one or two lines are more likely to be headings
     if block["line_count"] <= 2:
         return 1
     return 0
 
 def numbering_score(text):
+    # Leading numbering like "1." or "1.2" is a heading signal
     pattern = r"^(\d+(\.\d+)*)[\.\s]"
     if re.match(pattern, text):
         return 2
     return 0
 
 def uppercase_score(text):
+    # All-uppercase text is a heading signal
     if len(text) > 3 and text.isupper():
         return 1
     return 0
 
 def heading_score(block, normal_gap):
     score = 0
+    # Combine every individual heading signal into one score
     score += short_text_score(block["text"])
     score += bold_score(block["is_bold"])
     score += font_size_score(

@@ -8,9 +8,7 @@ from core.language_registry import create_default_registry
 
 
 class ParserManager:
-
     def __init__(self):
-
         self.registry = create_default_registry()
 
         self.parsers = {
@@ -28,7 +26,6 @@ class ParserManager:
         }
 
     def parse(self, source_code, language_id):
-
         parser = self.parsers.get(language_id)
 
         if parser is None:

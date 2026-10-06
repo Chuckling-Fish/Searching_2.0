@@ -2,15 +2,8 @@ from tree_sitter import Node
 
 
 def analyze_cpp_function(node, source):
-    """
-    Analyze a C++ function and generate a concise,
-    human-readable description of its behavior.
-    """
-
     behavior = []
-
     name_node = node.child_by_field_name("declarator")
-
     function_name = ""
 
     if name_node is not None:
@@ -25,7 +18,6 @@ def analyze_cpp_function(node, source):
         )
 
     declarator = node.child_by_field_name("declarator")
-
     parameters = (
         _find_parameters(declarator, source)
         if declarator is not None
@@ -40,23 +32,18 @@ def analyze_cpp_function(node, source):
         )
 
     detected = set()
-
     _analyze_node(
         node,
         source,
         behavior,
         detected
     )
-
     return " ".join(behavior)
 
 
 def _get_function_name(node, source):
-
     current = node
-
     while current is not None:
-
         if current.type in {
             "identifier",
             "field_identifier"
@@ -65,23 +52,17 @@ def _get_function_name(node, source):
                 current,
                 source
             )
-
         child = current.child_by_field_name(
             "declarator"
         )
-
         if child is None:
             break
-
         current = child
-
     return ""
 
 
 def _find_parameters(node, source):
-
     parameters = []
-
     if node is None:
         return parameters
 
@@ -93,18 +74,16 @@ def _find_parameters(node, source):
         return parameters
 
     for child in parameter_list.children:
-
         if child.type in {
             "parameter_declaration",
             "optional_parameter_declaration"
         }:
-
+            
             declarator = child.child_by_field_name(
                 "declarator"
             )
 
             if declarator is not None:
-
                 name = _get_identifier(
                     declarator,
                     source
@@ -112,12 +91,10 @@ def _find_parameters(node, source):
 
                 if name:
                     parameters.append(name)
-
     return parameters
 
 
 def _get_identifier(node, source):
-
     if node.type in {
         "identifier",
         "field_identifier"
@@ -128,7 +105,6 @@ def _get_identifier(node, source):
         )
 
     for child in node.children:
-
         result = _get_identifier(
             child,
             source
@@ -136,14 +112,11 @@ def _get_identifier(node, source):
 
         if result:
             return result
-
     return ""
 
 
 def _add_behavior(behavior, detected, message):
-
     if message not in detected:
-
         behavior.append(message)
         detected.add(message)
 
@@ -156,9 +129,7 @@ def _analyze_node(
 ):
 
     node_type = node.type
-
     if node_type == "return_statement":
-
         _add_behavior(
             behavior,
             detected,
@@ -166,20 +137,17 @@ def _analyze_node(
         )
 
     if node_type == "binary_expression":
-
         operator = node.child_by_field_name(
             "operator"
         )
 
         if operator is not None:
-
             op = _text(
                 operator,
                 source
             )
 
             if op == "*":
-
                 _add_behavior(
                     behavior,
                     detected,
@@ -187,7 +155,6 @@ def _analyze_node(
                 )
 
             elif op == "+":
-
                 _add_behavior(
                     behavior,
                     detected,
@@ -195,7 +162,6 @@ def _analyze_node(
                 )
 
             elif op == "-":
-
                 _add_behavior(
                     behavior,
                     detected,
@@ -203,7 +169,6 @@ def _analyze_node(
                 )
 
             elif op == "/":
-
                 _add_behavior(
                     behavior,
                     detected,
@@ -211,7 +176,6 @@ def _analyze_node(
                 )
 
             elif op == "%":
-
                 _add_behavior(
                     behavior,
                     detected,
@@ -273,7 +237,6 @@ def _analyze_node(
         )
 
     for child in node.children:
-
         _analyze_node(
             child,
             source,
@@ -283,7 +246,6 @@ def _analyze_node(
 
 
 def _text(node, source):
-
     return source[
         node.start_byte:node.end_byte
     ].decode("utf-8")

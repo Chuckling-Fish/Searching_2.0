@@ -7,6 +7,7 @@ DATABASE_PATH = Path(__file__).resolve().parent / "index.db"
 
 @contextmanager
 def scan_connection():
+    # Open a connection tuned for a scan's read and write pattern
     connection = sqlite3.connect(DATABASE_PATH)
     
     # Improve concurrent read/write performance
@@ -130,6 +131,7 @@ def add_chunks(file_id, chunks, connection=None):
         for chunk in chunks
     ]
 
+    # Insert all chunks in one batch
     cursor.executemany("""
         INSERT INTO chunks (
             file_id, page_start, page_end,

@@ -10,12 +10,13 @@ PDF_PATH = "C:/Users/Anjum/Downloads/Telegram Desktop/Social_Stratification.pdf"
 def clean_text(text):
     lines = text.splitlines()
     cleaned_lines = []
+    # Clean each line and drop empty ones
     for line in lines:
         line = line.strip()
         if not line:
             continue
         # Remove common PDF bullet characters
-        line = re.sub(r"[•●○▪▫]", "", line)
+        line = re.sub(r"[•●○▪▫]", "", line)
         # Normalize multiple spaces
         line = re.sub(r"\s+", " ", line)
         line = line.strip()
@@ -26,6 +27,7 @@ def clean_text(text):
 # COUNT WORDS
 def count_words(blocks):
     total_words = 0
+    # Sum the word count of every block
     for block in blocks:
         text = clean_text(block["text"])
         total_words += len(text.split())
@@ -34,8 +36,10 @@ def count_words(blocks):
 # CHECK FOR TABLE OF CONTENTS ENTRY
 def is_toc_entry(text):
     text = text.strip()
+    # Dotted leader line, e.g. "Chapter 1 ..... 5"
     if re.search(r"\.{3,}", text):
         return True
+    # Page number preceded by wide spacing
     if re.search(r"\s{8,}\d+$", text):
         return True
     return False
@@ -51,6 +55,7 @@ def is_toc_title(text):
 # DETERMINE NUMBERED HEADING LEVEL
 def get_numbered_heading_level(text):
     text = text.strip()
+    # Match numbering patterns from top level to four levels deep
     if re.match(
         r"^\d+\.\s+",
         text
@@ -80,9 +85,11 @@ def determine_heading_level(
 ):
     text = block["text"].strip()
     numbered_level = get_numbered_heading_level(text)
+    # Use the explicit numbering when present
     if numbered_level is not None:
         return numbered_level
 
+    # Otherwise nest one level below the current section
     if current_section_level is not None:
         return current_section_level + 1
 
@@ -94,6 +101,7 @@ def update_section_path(
     heading,
     heading_level
 ):
+    # Trim the path back to the parent level and append the new heading
     section_path = section_path[:heading_level - 1]
     section_path.append(heading)
     return section_path
@@ -104,6 +112,7 @@ def make_chunk(
     section_path
 ):
     text_parts = []
+    # Combine the cleaned text of every block in this chunk
     for block in blocks:
         text = clean_text(
             block["text"]
@@ -141,6 +150,7 @@ def save_current_chunk(
     current_chunk,
     section_path
 ):
+    # Skip saving an empty chunk
     if not current_chunk:
         return
     chunks.append(
@@ -158,6 +168,7 @@ def get_overlap_blocks(blocks, overlap_words):
     overlap = []
     word_count = 0
 
+    # Collect trailing blocks until the overlap word target is reached
     for block in reversed(blocks):
         text = clean_text(block["text"])
         word_count += len(text.split())
@@ -186,6 +197,7 @@ def create_chunks(
 
     # TABLE OF CONTENTS STATE
     inside_toc = False
+    # Walk through every extracted block in reading order
     for block in blocks:
         block_type = block["type"]
         text = clean_text(
@@ -209,6 +221,7 @@ def create_chunks(
         if inside_toc and is_toc_entry(text):
             continue
         if inside_toc:
+            # Leave TOC mode once a real numbered heading appears
             if (
                 block_type == "HEADING"
                 and is_numbered_heading(text)
@@ -281,6 +294,7 @@ def create_chunks(
 def extract_document(pdf_path):
     document = pymupdf.open(pdf_path)
     all_blocks = []
+    # Process every page and collect its blocks
     for page_number, page in enumerate(
         document,
         start=1
@@ -315,6 +329,7 @@ if __name__ == "__main__":
         "Total chunks:",
         len(chunks)
     )
+    # Print the details of every chunk
     for i, chunk in enumerate(
         chunks,
         start=1

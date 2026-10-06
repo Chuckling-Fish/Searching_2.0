@@ -4,14 +4,8 @@ from pathlib import Path
 
 
 def analyze_cpp_output(code, timeout=3, input_data=""):
-    """
-    Compile and run a standalone C++ code string.
-    """
-
     with tempfile.TemporaryDirectory() as temp_dir:
-
         temp_path = Path(temp_dir)
-
         source_file = temp_path / "program.cpp"
         executable = temp_path / "program"
 
@@ -21,7 +15,6 @@ def analyze_cpp_output(code, timeout=3, input_data=""):
         )
 
         try:
-
             compile_process = subprocess.run(
                 [
                     "g++",
@@ -37,7 +30,6 @@ def analyze_cpp_output(code, timeout=3, input_data=""):
             )
 
         except subprocess.TimeoutExpired:
-
             return {
                 "status": "compile_timeout",
                 "output": "",
@@ -45,7 +37,6 @@ def analyze_cpp_output(code, timeout=3, input_data=""):
             }
 
         if compile_process.returncode != 0:
-
             return {
                 "status": "compile_error",
                 "output": "",
@@ -53,7 +44,6 @@ def analyze_cpp_output(code, timeout=3, input_data=""):
             }
 
         try:
-
             run_process = subprocess.run(
                 [str(executable)],
                 input=input_data,
@@ -63,7 +53,6 @@ def analyze_cpp_output(code, timeout=3, input_data=""):
             )
 
         except subprocess.TimeoutExpired:
-
             return {
                 "status": "timeout",
                 "output": "",
@@ -83,14 +72,9 @@ def analyze_cpp_output(code, timeout=3, input_data=""):
 
 
 def analyze_cpp_file(file_path, timeout=3, input_data=""):
-    """
-    Read and execute a complete C++ source file.
-    """
-
     path = Path(file_path).expanduser().resolve()
 
     if not path.exists():
-
         return {
             "status": "file_not_found",
             "output": "",
@@ -113,14 +97,12 @@ def analyze_cpp_file(file_path, timeout=3, input_data=""):
         }
 
     try:
-
         code = path.read_text(
             encoding="utf-8",
             errors="replace"
         )
 
     except OSError as error:
-
         return {
             "status": "read_error",
             "output": "",
@@ -132,4 +114,3 @@ def analyze_cpp_file(file_path, timeout=3, input_data=""):
         timeout=timeout,
         input_data=input_data
     )
-

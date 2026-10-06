@@ -4,6 +4,7 @@ import sqlite3
 from database.database import DATABASE_PATH
 
 def sanitize_fts_query(query):
+    # Break the query into safe word tokens for FTS5
     tokens = re.findall(r"\w+", query.lower())
     if not tokens:
         return None
@@ -11,6 +12,7 @@ def sanitize_fts_query(query):
 
 
 def keyword_search(query, extension=None, limit=10):
+    # Build a safe FTS5 query from the raw input
     safe_query = sanitize_fts_query(query)
     if safe_query is None:
         return []
@@ -38,6 +40,7 @@ def keyword_search(query, extension=None, limit=10):
     """
     params = [safe_query]
 
+    # Restrict results to a specific file extension if requested
     if extension:
         sql += " AND files.extension = ?"
         params.append(extension)
@@ -45,6 +48,7 @@ def keyword_search(query, extension=None, limit=10):
     sql += " ORDER BY score LIMIT ?"
     params.append(limit)
 
+    # Run the search query
     cursor.execute(sql, params)
     results = [dict(row) for row in cursor.fetchall()]
     connection.close()
@@ -58,6 +62,7 @@ if __name__ == "__main__":
     results = keyword_search(query)
     if not results:
         print("No results.")
+    # Print each result with its score and matched snippet
     for i, result in enumerate(results, start=1):
         print("\n" + "-" * 80)
         print(f"{i}. {result['file_name']}  (page {result['page_start']}-{result['page_end']})")

@@ -5,6 +5,7 @@ RRF_K = 60
 
 class CodeHybridSearch:
     def __init__(self):
+        # Load the semantic model and vector index once
         print("Initializing code hybrid search...")
         self.semantic_search = SemanticSearch()
         self.semantic_search.load_index()
@@ -12,6 +13,7 @@ class CodeHybridSearch:
 
     def reciprocal_rank_fusion(self, result_lists, limit=10):
         combined = {}
+        # Accumulate a reciprocal rank score for each chunk across result lists
         for results in result_lists:
             for rank, result in enumerate(results, start=1):
                 chunk_id = result["chunk_id"]
@@ -23,6 +25,7 @@ class CodeHybridSearch:
                 combined[chunk_id]["rrf_score"] += (
                     1.0 / (RRF_K + rank)
                 )
+        # Sort chunks by their combined score
         fused = sorted(
             combined.values(),
             key=lambda item: item["rrf_score"],
@@ -43,6 +46,7 @@ class CodeHybridSearch:
         limit=10
     ):
 
+        # Keyword-only search
         if mode == "keyword":
             return keyword_search(
                 query,
@@ -50,12 +54,14 @@ class CodeHybridSearch:
                 limit=limit
             )
 
+        # Semantic-only search
         if mode == "semantic":
             results = self.semantic_search.search(
                 query,
                 k=limit
             )
 
+            # Filter semantic results by extension since the index has none
             if extension:
                 results = [
                     result
@@ -67,6 +73,7 @@ class CodeHybridSearch:
 
             return results[:limit]
         
+        # Hybrid search combining keyword and semantic results
         if mode == "hybrid":
             keyword_results = keyword_search(
                 query,
@@ -79,6 +86,7 @@ class CodeHybridSearch:
                 k=limit * 2
             )
 
+            # Filter semantic results by extension since the index has none
             if extension:
                 semantic_results = [
                     result
@@ -88,6 +96,7 @@ class CodeHybridSearch:
                     .endswith(extension.lower())
                 ]
 
+            # Merge both result sets by rank
             return self.reciprocal_rank_fusion(
                 [
                     keyword_results,
@@ -103,6 +112,7 @@ class CodeHybridSearch:
 _searcher = None
 
 def get_code_searcher():
+    # Reuse a single searcher instance across calls
     global _searcher
     if _searcher is None:
         _searcher = CodeHybridSearch()
@@ -129,6 +139,7 @@ if __name__ == "__main__":
     print("Code Search")
     print("Type 'quit' to exit.\n")
     while True:
+        # Read the next search query
         query = input("Search: ").strip()
         if not query:
             continue
@@ -137,6 +148,7 @@ if __name__ == "__main__":
             print("Bye.")
             break
 
+        # Run a hybrid search for the query
         results = hybrid_search(
             query,
             mode="hybrid",
@@ -147,6 +159,7 @@ if __name__ == "__main__":
             f"\nFound {len(results)} results:\n"
         )
 
+        # Print each result's details
         for index, result in enumerate(
             results,
             start=1

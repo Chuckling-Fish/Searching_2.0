@@ -184,7 +184,6 @@ Select Result
 Show Code / Behavior / Analyze Output
 ```
 
-<<<<<<< HEAD
 The PDF/document search and code-search components are separate parts of the overall project.
 The program will import a few libraries and setup the environment for searching. 
 
@@ -193,6 +192,4 @@ After a small delay, you will be prompted to search. Type your search term and p
 The program will keep running even after you enter your search term, prompting you again and again to search. You can quit by typing `quit` or `exit`, or by simply pressing `Enter`.
 
 Enjoy!
-=======
 The code-search component operates independently from the PDF/document search component.
->>>>>>> 6638af6 (Update code search CLI and README)

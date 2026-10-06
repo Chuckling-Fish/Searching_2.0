@@ -12,6 +12,7 @@ def sanitize_query_tokens(query):
     return " ".join(f'"{token}"' for token in tokens)
 
 def filename_search(query, extension=None, limit=20):
+    # Build a safe FTS5 query from the raw input
     safe_query = sanitize_query_tokens(query)
     if safe_query is None:
         return []
@@ -44,6 +45,7 @@ def filename_search(query, extension=None, limit=20):
     sql += " ORDER BY score LIMIT ?"
     params.append(limit)
 
+    # Run the search query
     cursor.execute(sql, params)
     results = [dict(row) for row in cursor.fetchall()]
     connection.close()
@@ -56,5 +58,6 @@ if __name__ == "__main__":
     # Get the search query from arguments or input
     query = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else input("Search: ")
 
+    # Print each matching file with its score
     for i, result in enumerate(filename_search(query), start=1):
         print(f"{i}. {result['file_name']}  ({result['file_path']})  score={result['score']:.3f}")

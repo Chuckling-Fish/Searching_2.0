@@ -40,8 +40,7 @@ STRUCTURE_TYPES = {
 
 def get_node_name(node, source):
 
-    # Python, Java, and some C++ nodes
-    # have a direct "name" field.
+    # Python, Java, and some C++ nodes have a direct "name" field.
     name_node = node.child_by_field_name("name")
 
     if name_node is not None:
@@ -49,8 +48,7 @@ def get_node_name(node, source):
             name_node.start_byte:name_node.end_byte
         ].decode("utf-8")
 
-    # C++ function_definition stores the
-    # function name inside the declarator.
+    # C++ function_definition stores the function name inside the declarator.
     declarator = node.child_by_field_name("declarator")
 
     if declarator is not None:
@@ -69,8 +67,7 @@ def get_node_name(node, source):
 
             current = nested
 
-        # At this point, C++ may give us:
-        # identifier / field_identifier
+        # At this point, C++ may give us: identifier / field_identifier
         if current.type in {
             "identifier",
             "field_identifier"
@@ -79,15 +76,12 @@ def get_node_name(node, source):
                 current.start_byte:current.end_byte
             ].decode("utf-8")
 
-        # Some declarators may still contain
-        # the name as a field.
+        # Some declarators may still contain the name as a field.
         final_name = current.child_by_field_name("name")
-
         if final_name is not None:
             return source[
                 final_name.start_byte:final_name.end_byte
             ].decode("utf-8")
-
     return ""
 
 
@@ -99,7 +93,6 @@ def extract_chunks(
 ):
 
     chunks = []
-
     structure_map = STRUCTURE_TYPES.get(
         language_id,
         {}
@@ -107,10 +100,8 @@ def extract_chunks(
 
     def visit(node, parent_name=""):
 
-        # Is this node something we want
-        # to turn into a chunk?
+        # Is this node something we want to turn into a chunk?
         if node.type in structure_map:
-
             chunk_type = structure_map[node.type]
 
             name = get_node_name(
@@ -133,9 +124,6 @@ def extract_chunks(
             )
 
             chunks.append(chunk)
-
-                       # This structure becomes the parent
-            # of structures inside it.
             # Build the full parent context
             if name:
                 if parent_name:

@@ -2,12 +2,14 @@ import sqlite3
 
 class CodeDatabase:
     def __init__(self, db_path="database/code_search.db"):
+        # Connect to the code database and make sure the schema is ready
         self.connection = sqlite3.connect(db_path)
         self.create_tables()
         self.ensure_behavior_column()
         self.ensure_fts_table()
 
     def create_tables(self):
+        # Create the main code chunks table if it does not exist
         self.connection.execute("""
             CREATE TABLE IF NOT EXISTS code_chunks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,10 +23,10 @@ class CodeDatabase:
                 behavior TEXT DEFAULT ''
             )
         """)
-
         self.connection.commit()
 
     def ensure_behavior_column(self):
+        # Read the current table columns
         columns = self.connection.execute("""
             PRAGMA table_info(code_chunks)
         """).fetchall()
@@ -34,6 +36,7 @@ class CodeDatabase:
             for column in columns
         ]
 
+        # Add the behavior column if an older schema is missing it
         if "behavior" not in column_names:
             self.connection.execute("""
                 ALTER TABLE code_chunks
@@ -72,6 +75,7 @@ class CodeDatabase:
 
         # Existing FTS table does not contain behavior.
         if "behavior" not in existing_columns:
+            # Drop and recreate the FTS table with the behavior column
             self.connection.execute("""
                 DROP TABLE code_chunks_fts
             """)
@@ -92,6 +96,7 @@ class CodeDatabase:
             self.rebuild_fts()
 
     def rebuild_fts(self):
+        # Repopulate the FTS table from the main chunks table
         self.connection.execute("""
             INSERT INTO code_chunks_fts (
                 rowid,
@@ -136,6 +141,7 @@ class CodeDatabase:
 
     def insert_chunk(self, chunk, file_path):
         file_path = str(file_path)
+        # Insert the chunk into the main table
         cursor = self.connection.execute("""
             INSERT INTO code_chunks (
                 file_path,
@@ -160,6 +166,7 @@ class CodeDatabase:
         ))
 
         chunk_id = cursor.lastrowid
+        # Mirror the new chunk into the FTS table
         self.connection.execute("""
             INSERT INTO code_chunks_fts (
                 rowid,
@@ -179,6 +186,7 @@ class CodeDatabase:
         self.connection.commit()
 
     def get_all_chunks(self):
+        # Fetch every stored code chunk
         cursor = self.connection.execute("""
             SELECT
                 id,
@@ -195,6 +203,7 @@ class CodeDatabase:
         return cursor.fetchall()
 
     def search(self, query):
+        # Match the query against the FTS table and join back to full chunk data
         cursor = self.connection.execute("""
             SELECT
                 code_chunks.id,

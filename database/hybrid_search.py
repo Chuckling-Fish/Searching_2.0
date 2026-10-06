@@ -13,6 +13,7 @@ RRF_K = 60
 
 def reciprocal_rank_fusion(result_lists, id_key):
     combined = {}
+    # Accumulate a reciprocal rank score for each item across result lists
     for results in result_lists:
         for rank, result in enumerate(results, start=1):
             key = result[id_key]
@@ -81,6 +82,7 @@ def get_preview(result, max_chars=600):
 
     text = result.get("text", "")
 
+    # Truncate long text at a word boundary
     if len(text) > max_chars:
         return text[:max_chars].rsplit(" ", 1)[0] + " ..."
 
@@ -91,6 +93,7 @@ def print_results(results, elapsed):
 
     print("=== Content matches ===")
 
+    # Print each content match with its location and preview
     for i, r in enumerate(results["content"], start=1):
         marker = " [name also matches]" if r.get("name_also_matches") else ""
         heading = r.get("heading") or "(no heading)"
@@ -107,12 +110,14 @@ def print_results(results, elapsed):
 
     print("\n=== Filename matches ===")
 
+    # Print each filename match
     for i, r in enumerate(results["filenames"], start=1):
         print(f"{i}. {r['file_name']}")
         print(f"   Location: {r['file_path']}")
 
 
 def choose_mode():
+    # Prompt the user to pick a search mode
     print()
     print("Search mode:")
     print("1. Hybrid")
@@ -133,6 +138,7 @@ def choose_mode():
 if __name__ == "__main__":
     print(f"{_import_elapsed:.2f}s")
 
+    # Load the semantic model once before the search loop
     from database.semantic_search import _load as _load_semantic_model
     _load_semantic_model()
 
@@ -142,6 +148,7 @@ if __name__ == "__main__":
     )
 
     while True:
+        # Read the next search query
         query = input("Search: ").strip()
 
         if not query or query.lower() in ("quit", "exit"):
@@ -157,6 +164,7 @@ if __name__ == "__main__":
         if not extension:
             extension = None
 
+        # Run the search and time it
         started = time.time()
         results = hybrid_search(query, mode=mode, extension=extension)
         elapsed = time.time() - started
