@@ -150,10 +150,30 @@ def save_current_chunk(
         )
     )
 
+DEFAULT_MAX_WORDS = 180
+
+DEFAULT_OVERLAP_WORDS = 40
+
+def get_overlap_blocks(blocks, overlap_words):
+    overlap = []
+    word_count = 0
+
+    for block in reversed(blocks):
+        text = clean_text(block["text"])
+        word_count += len(text.split())
+        overlap.insert(0, block)
+
+        if word_count >= overlap_words:
+            break
+
+    return overlap
+
+
 # CREATE CHUNKS
 def create_chunks(
     blocks,
-    max_words=250
+    max_words=DEFAULT_MAX_WORDS,
+    overlap_words=DEFAULT_OVERLAP_WORDS
 ):
     chunks = []
     current_chunk = []
@@ -171,8 +191,8 @@ def create_chunks(
         text = clean_text(
             block["text"]
         )
-                     
-        # Ignore empty blocks              
+
+        # Ignore empty blocks
         if not text:
             continue
 
@@ -206,6 +226,8 @@ def create_chunks(
                 current_chunk,
                 section_path
             )
+            # New section: do NOT carry overlap across a heading
+            # boundary, this is a genuine topic change.
             current_chunk = []
             # Determine heading level
             heading_level = determine_heading_level(
@@ -240,9 +262,13 @@ def create_chunks(
                     current_chunk,
                     section_path
                 )
-                current_chunk = []
+                # Split purely on size, not topic - carry the tail
+                # of this chunk into the next one.
+                current_chunk = get_overlap_blocks(
+                    current_chunk,
+                    overlap_words
+                )
 
-     
     # SAVE FINAL CHUNK
     save_current_chunk(
         chunks,

@@ -1,32 +1,27 @@
 import os
 import sqlite3
 
-# Skip the "has this model changed on the Hub?" network check that
-# sentence-transformers/huggingface_hub normally does on every load,
-# even when the model is already cached locally. Must be set BEFORE
-# sentence_transformers is imported - it's read at import time.
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 
 import hnswlib
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 
-from database import DATABASE_PATH
-from build_semantic_index import MODEL_NAME, EMBEDDING_DIM, INDEX_PATH
+from database.database import DATABASE_PATH
+from database.build_semantic_index import MODEL_NAME, EMBEDDING_DIM, INDEX_PATH
 
-# Loaded once per process and reused - loading the model and the
-# index file are the slow parts, so we don't want to redo them on
-# every call to semantic_search().
+CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
+RERANK_POOL_MULTIPLIER = 4
+
 _model = None
 _index = None
+_cross_encoder = None
 
 
 def _load():
     global _model, _index
 
     if _model is None:
-        # local_files_only as a second guarantee alongside HF_HUB_OFFLINE -
-        # this fails fast with a clear error if the model was never
-        # downloaded, instead of silently trying to reach the network.
         _model = SentenceTransformer(MODEL_NAME, local_files_only=True)
 
     if _index is None:
@@ -41,43 +36,50 @@ def _load():
     return _model, _index
 
 
-def semantic_search(query, extension=None, limit=10):
-    """
-    Returns the `limit` chunks whose meaning is closest to the query,
-    even if they don't share exact words with it. Lower score = more
-    similar (cosine distance), same convention as bm25 in
-    keyword_search - both sort ascending.
+def _load_cross_encoder():
+    global _cross_encoder
+    if _cross_encoder is None:
+        try:
+            _cross_encoder = CrossEncoder(CROSS_ENCODER_MODEL, local_files_only=True)
+        except OSError:
+            raise RuntimeError(
+                f"Cross-encoder model '{CROSS_ENCODER_MODEL}' is not cached locally, "
+                f"and this program runs with HF_HUB_OFFLINE=1 so it can't be downloaded "
+                f"automatically. Run this once while online to cache it:\n\n"
+                f"    python -c \"from sentence_transformers import CrossEncoder; "
+                f"CrossEncoder('{CROSS_ENCODER_MODEL}')\"\n\n"
+                f"Then re-run this program offline."
+            )
 
-    HNSWlib has no notion of "only search chunks from .pdf files" -
-    it just returns the k nearest vectors, full stop. So when an
-    extension filter is given, more neighbors are requested from
-    HNSWlib than needed (OVER_FETCH_MULTIPLIER x) and the extras are
-    filtered out in SQL afterwards. This means a very rare extension
-    among a huge, mostly-different-type corpus could still return
-    fewer than `limit` results - a real limitation of bolting a
-    metadata filter onto an ANN index after the fact, not a bug.
-    """
+    return _cross_encoder
 
+RERANK_POOL_MULTIPLIER = 2
+
+RERANK_TEXT_WORDS = 120
+
+def semantic_search(query, extension=None, limit=10, rerank=False):
     model, index = _load()
-
     query_vector = model.encode([query], normalize_embeddings=True)
 
-    OVER_FETCH_MULTIPLIER = 5
-    k = limit * OVER_FETCH_MULTIPLIER if extension else limit
-    k = min(k, index.get_current_count())
+    EXTENSION_OVER_FETCH_MULTIPLIER = 5
+    pool_size = limit * RERANK_POOL_MULTIPLIER if rerank else limit
+    if extension:
+        pool_size = max(pool_size, limit * EXTENSION_OVER_FETCH_MULTIPLIER)
+
+    k = min(pool_size, index.get_current_count())
 
     labels, distances = index.knn_query(query_vector, k=k)
 
     chunk_ids = labels[0].tolist()
-    scores = distances[0].tolist()
+    vector_scores = distances[0].tolist()
 
     connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
     cursor = connection.cursor()
 
-    results = []
+    candidates = []
 
-    for chunk_id, score in zip(chunk_ids, scores):
+    for chunk_id, vector_score in zip(chunk_ids, vector_scores):
         sql = """
             SELECT
                 chunks.id AS chunk_id,
@@ -104,24 +106,36 @@ def semantic_search(query, extension=None, limit=10):
 
         if row:
             result = dict(row)
-            result["score"] = score
-            results.append(result)
-
-        if len(results) >= limit:
-            break
-
+            result["vector_score"] = vector_score
+            candidates.append(result)
     connection.close()
 
-    return results
+    if not rerank:
+        return candidates[:limit]
+
+    if not candidates:
+        return []
+
+    cross_encoder = _load_cross_encoder()
+
+    pairs = [
+        [query, " ".join(candidate["text"].split()[:RERANK_TEXT_WORDS])]
+        for candidate in candidates
+    ]
+    rerank_scores = cross_encoder.predict(pairs)
+
+    for candidate, rerank_score in zip(candidates, rerank_scores):
+        candidate["score"] = float(rerank_score)
+        
+    candidates.sort(key=lambda c: c["score"], reverse=True)
+    return candidates[:limit]
 
 
 if __name__ == "__main__":
     import sys
-
     query = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else input("Search: ")
-
     for i, result in enumerate(semantic_search(query), start=1):
         print(f"\n{i}. {result['file_name']} (page {result['page_start']}-{result['page_end']})")
         print(f"   Section: {result['section_path']}")
-        print(f"   Distance: {result['score']:.4f}")
+        print(f"   Relevance: {result['score']:.4f}  (vector distance: {result['vector_score']:.4f})")
         print(f"   {result['text'][:200]}...")

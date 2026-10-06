@@ -24,7 +24,7 @@ SKIP_DIRECTORIES = {
     "build", "dist",
 }
 
-MAX_FILE_SIZE = 200 * 1024 * 1024 
+MAX_FILE_SIZE = 200 * 1024 * 1024
 
 # Commit after x changes
 COMMIT_EVERY = 50
@@ -51,8 +51,12 @@ def find_files(folder):
         yield path
 
 
-def needs_reindex(path, metadata, known):
+def needs_reindex(path, metadata, known, force=False):
     key = metadata["path"]
+
+    # Force mode
+    if force:
+        return True, quick_hash(path)
 
     # New files always need indexing
     if key not in known:
@@ -80,7 +84,7 @@ def extract_chunks(path):
         return create_chunks(blocks)
     raise ValueError(f"No extractor for {suffix}")
 
-def scan_folder(folder, verbose=True):
+def scan_folder(folder, verbose=True, force=False):
     folder = Path(folder).resolve()
     if not folder.is_dir():
         print(f"Not a folder: {folder}")
@@ -89,6 +93,9 @@ def scan_folder(folder, verbose=True):
     init_db()
     started = time.time()
     stats = {"indexed": 0, "filename_only": 0, "skipped": 0, "removed": 0, "failed": 0}
+
+    if force and verbose:
+        print("Force mode: re-chunking every content-supported file, ignoring change detection.\n")
 
     # Load existing indexed files
     with scan_connection() as connection:
@@ -123,7 +130,7 @@ def scan_folder(folder, verbose=True):
                 continue
 
             # Check whether the PDF needs reindexing
-            reindex, file_hash = needs_reindex(path, metadata, known)
+            reindex, file_hash = needs_reindex(path, metadata, known, force=force)
 
             if not reindex:
                 add_file(metadata, file_hash, content_indexed=1, connection=connection)
@@ -178,5 +185,8 @@ def scan_folder(folder, verbose=True):
 
 
 if __name__ == "__main__":
-    target = sys.argv[1] if len(sys.argv) > 1 else input("Folder to index: ")
-    scan_folder(target)
+    args = [a for a in sys.argv[1:] if a != "--force"]
+    force = "--force" in sys.argv[1:]
+
+    target = args[0] if args else input("Folder to index: ")
+    scan_folder(target, force=force)

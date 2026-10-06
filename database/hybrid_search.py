@@ -2,9 +2,9 @@ import time
 
 _import_started = time.time()
 
-from search import keyword_search
-from semantic_search import semantic_search
-from filename_search import filename_search
+from database.search import keyword_search
+from database.semantic_search import semantic_search
+from database.filename_search import filename_search
 
 _import_elapsed = time.time() - _import_started
 
@@ -101,19 +101,39 @@ def print_results(results, elapsed):
         )
 
         print(f"\n{i}. {r['file_name']}{marker}")
+        print(f"   Location: {r['file_path']}")
         print(f"   {heading}  {pages}")
         print(f"   {get_preview(r)}")
 
     print("\n=== Filename matches ===")
 
     for i, r in enumerate(results["filenames"], start=1):
-        print(f"{i}. {r['file_name']}  ({r['file_path']})")
+        print(f"{i}. {r['file_name']}")
+        print(f"   Location: {r['file_path']}")
+
+
+def choose_mode():
+    print()
+    print("Search mode:")
+    print("1. Hybrid")
+    print("2. Keyword")
+    print("3. Semantic")
+
+    choice = input("Choose [1]: ").strip()
+
+    if choice == "2":
+        return "keyword_only"
+
+    if choice == "3":
+        return "semantic_only"
+
+    return "hybrid"
 
 
 if __name__ == "__main__":
     print(f"{_import_elapsed:.2f}s")
 
-    from semantic_search import _load as _load_semantic_model
+    from database.semantic_search import _load as _load_semantic_model
     _load_semantic_model()
 
     print(
@@ -128,8 +148,17 @@ if __name__ == "__main__":
             print("Bye.")
             break
 
+        mode = choose_mode()
+
+        extension = input(
+            "File extension (example: .pdf; press Enter for all): "
+        ).strip()
+
+        if not extension:
+            extension = None
+
         started = time.time()
-        results = hybrid_search(query)
+        results = hybrid_search(query, mode=mode, extension=extension)
         elapsed = time.time() - started
 
         print_results(results, elapsed)

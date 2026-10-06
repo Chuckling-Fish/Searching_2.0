@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS chunks (
     FOREIGN KEY (file_id) REFERENCES files(id)
 );
 
-# Full-text index for chunk content
+-- Full-text index for chunk content
 CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
     heading,
     section_path,
@@ -43,7 +43,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
     content_rowid='id'
 );
 
-# Keep chunk search index synchronized
+-- Keep chunk search index synchronized
 CREATE TRIGGER IF NOT EXISTS chunks_after_insert AFTER INSERT ON chunks BEGIN
     INSERT INTO chunks_fts(rowid, heading, section_path, text)
     VALUES (new.id, new.heading, new.section_path, new.text);
@@ -61,14 +61,14 @@ CREATE TRIGGER IF NOT EXISTS chunks_after_update AFTER UPDATE ON chunks BEGIN
     VALUES (new.id, new.heading, new.section_path, new.text);
 END;
 
-# Full-text index for file names
+-- Full-text index for file names
 CREATE VIRTUAL TABLE IF NOT EXISTS files_fts USING fts5(
     name_tokens,
     content='files',
     content_rowid='id'
 );
 
-# Keep file search index synchronized
+-- Keep file search index synchronized
 CREATE TRIGGER IF NOT EXISTS files_after_insert AFTER INSERT ON files BEGIN
     INSERT INTO files_fts(rowid, name_tokens)
     VALUES (new.id, new.name_tokens);

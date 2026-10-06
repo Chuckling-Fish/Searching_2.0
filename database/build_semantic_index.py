@@ -4,7 +4,7 @@ from pathlib import Path
 import hnswlib
 from sentence_transformers import SentenceTransformer
 
-from database import DATABASE_PATH
+from database.database import DATABASE_PATH
 from database.code_database import CodeDatabase
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -12,28 +12,23 @@ BASE_DIR = Path(__file__).resolve().parent
 PDF_INDEX_PATH = BASE_DIR / "vector_index.bin"
 CODE_INDEX_PATH = BASE_DIR / "code_vector_index.bin"
 
+
+INDEX_PATH = PDF_INDEX_PATH
+EMBEDDING_DIM = 384  
+
 MODEL_NAME = "all-MiniLM-L6-v2"
 
 
-# -----------------------------------------------------------
-# Shared model loading
-# -----------------------------------------------------------
 
+# Shared model loading
 def load_model():
     try:
-        # Fast path: model already downloaded, skip the network
-        # cache-check entirely.
         return SentenceTransformer(MODEL_NAME, local_files_only=True)
     except OSError:
-        # First-ever run: nothing cached yet, so this one time has to
-        # actually reach the network to download it.
         return SentenceTransformer(MODEL_NAME)
 
 
-# -----------------------------------------------------------
 # PDF chunks (from the general SQLite database)
-# -----------------------------------------------------------
-
 def load_pdf_chunks():
     connection = sqlite3.connect(DATABASE_PATH)
     cursor = connection.cursor()
@@ -42,26 +37,16 @@ def load_pdf_chunks():
     rows = cursor.fetchall()
 
     connection.close()
-
     return rows
 
 
 def build_pdf_search_text(section_path, text):
-    """
-    Rebuilds the "heading context + content" text used for embeddings,
-    on the fly, from columns that are already stored (section_path,
-    text).
-    """
-
     if section_path:
         return f"{section_path} {text}"
-
     return text
-
 
 def build_pdf_index(model, embedding_dim):
     rows = load_pdf_chunks()
-
     if not rows:
         print("No PDF chunks found in the database - run index_pdf.py first.")
         return
@@ -87,15 +72,12 @@ def build_pdf_index(model, embedding_dim):
     print(f"Saved PDF vector index ({len(chunk_ids)} chunks) to {PDF_INDEX_PATH}")
 
 
-# -----------------------------------------------------------
 # Code chunks (from the dedicated code database)
-# -----------------------------------------------------------
 
 def load_code_chunks():
     database = CodeDatabase()
     rows = database.get_all_chunks()
     return rows
-
 
 def build_code_search_text(row):
     (
@@ -115,7 +97,6 @@ def build_code_search_text(row):
         code = code.decode("utf-8", errors="replace")
 
     behavior = behavior or ""
-
     return f"""
 File: {file_path}
 Language: {language}
@@ -126,14 +107,11 @@ Code:
 {code}
 """
 
-
 def build_code_index(model, embedding_dim):
     rows = load_code_chunks()
-
     if not rows:
         print("No code chunks found in database.")
         return
-
     chunk_ids = [row[0] for row in rows]
     texts = [build_code_search_text(row) for row in rows]
 
@@ -155,10 +133,7 @@ def build_code_index(model, embedding_dim):
     print(f"Saved code vector index ({len(chunk_ids)} chunks) to {CODE_INDEX_PATH}")
 
 
-# -----------------------------------------------------------
 # Entry point - builds both indexes, loading the model once
-# -----------------------------------------------------------
-
 def build_index():
     model = load_model()
     embedding_dim = model.get_sentence_embedding_dimension()
@@ -166,7 +141,6 @@ def build_index():
 
     build_pdf_index(model, embedding_dim)
     build_code_index(model, embedding_dim)
-
 
 if __name__ == "__main__":
     build_index()

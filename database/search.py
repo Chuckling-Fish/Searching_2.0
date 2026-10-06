@@ -1,8 +1,7 @@
 import re
 import sqlite3
 
-from database import DATABASE_PATH
-
+from database.database import DATABASE_PATH
 
 def sanitize_fts_query(query):
     tokens = re.findall(r"\w+", query.lower())

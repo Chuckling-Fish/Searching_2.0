@@ -1,7 +1,7 @@
 import re
 import sqlite3
 
-from database import DATABASE_PATH
+from database.database import DATABASE_PATH
 
 def sanitize_query_tokens(query):
 
