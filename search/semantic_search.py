@@ -1,17 +1,35 @@
+import os
+
+# Force offline mode so no Hugging Face Hub request is ever made
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+
 import hnswlib
 from sentence_transformers import SentenceTransformer
 from pathlib import Path
 
 from database.code_database import CodeDatabase
 
+MODEL_NAME = "all-MiniLM-L6-v2"
+
 
 class SemanticSearch:
     def __init__(self):
-        # Load the embedding model used for code chunks
+        # Load the embedding model used for code chunks, from the local cache only
         print("Loading embedding model...")
-        self.model = SentenceTransformer(
-            "all-MiniLM-L6-v2"
-        )
+        try:
+            self.model = SentenceTransformer(
+                MODEL_NAME,
+                local_files_only=True
+            )
+        except OSError:
+            raise RuntimeError(
+                f"Embedding model '{MODEL_NAME}' is not cached locally, "
+                f"and this program runs offline so it can't be downloaded "
+                f"automatically. Run this once while online to cache it:\n\n"
+                f"    python -c \"from sentence_transformers import SentenceTransformer; "
+                f"SentenceTransformer('{MODEL_NAME}')\"\n\n"
+                f"Then re-run this program offline."
+            )
 
         print("Model loaded successfully.")
         self.database = CodeDatabase()
