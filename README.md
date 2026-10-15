@@ -24,7 +24,7 @@ This setp will take a few minutes, depending on how large the files in a directo
 ## 2. Build the Semantic Index
 To build a semantic index, you need to run `build_semantic_index.py`. If you are already in the root directory, your prompt will be this:
 ```
-python database/build_semantic_index.py
+python -m database.build_semantic_index
 ```
 This will build a semantic index, embedded as vectors in `database/vector_index.bin`.
 
@@ -34,7 +34,7 @@ This step takes the most amount of time.
 ## 3. Search
 To start the search, assuming you are in the root directory, your prompt will look like this:
 ```
-python database/hybrid_search.py
+python -m database.hybrid_search
 ```
 
 Use keyword search when you know the exact wording you're looking for.
